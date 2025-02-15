@@ -1,12 +1,11 @@
 package com.example.todolistapp.presentation.screens.task
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.todolistapp.data.TaskDataSource
 import com.example.todolistapp.domain.model.Task
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.util.UUID
 
@@ -21,23 +20,23 @@ data class AddEditTaskUiState(
 
 class AddEditTaskViewModel : ViewModel() {
 
-    var addEditTaskUiState by mutableStateOf(AddEditTaskUiState())
-        private set
+    private val _addEditTaskUiState = MutableStateFlow(AddEditTaskUiState())
+    val addEditTaskUiState: StateFlow<AddEditTaskUiState> = _addEditTaskUiState
 
     fun updateName(newName: String) {
-        addEditTaskUiState = addEditTaskUiState.copy(taskName = newName)
+        _addEditTaskUiState.value = _addEditTaskUiState.value.copy(taskName = newName)
     }
 
     fun updateDescription(newDescription: String) {
-        addEditTaskUiState = addEditTaskUiState.copy(taskDescription = newDescription)
+        _addEditTaskUiState.value = _addEditTaskUiState.value.copy(taskDescription = newDescription)
     }
 
     fun updateDueDate(newDate: String) {
-        addEditTaskUiState = addEditTaskUiState.copy(taskDueDate = newDate)
+        _addEditTaskUiState.value = _addEditTaskUiState.value.copy(taskDueDate = newDate)
     }
 
     fun updateTaskId(taskId: String) {
-        addEditTaskUiState = addEditTaskUiState.copy(taskId = taskId)
+        _addEditTaskUiState.value = _addEditTaskUiState.value.copy(taskId = taskId)
     }
 
     /**
@@ -46,11 +45,11 @@ class AddEditTaskViewModel : ViewModel() {
     suspend fun saveTask(userId: String): Boolean {
         return try {
             val task = Task(
-                taskID = addEditTaskUiState.taskId.ifEmpty { UUID.randomUUID().toString() },
-                taskName = addEditTaskUiState.taskName,
-                taskDescription = addEditTaskUiState.taskDescription,
-                taskDueDate = addEditTaskUiState.taskDueDate,
-                taskIsFinished = addEditTaskUiState.isTaskFinished,
+                taskID = _addEditTaskUiState.value.taskId.ifEmpty { UUID.randomUUID().toString() },
+                taskName = _addEditTaskUiState.value.taskName,
+                taskDescription = _addEditTaskUiState.value.taskDescription,
+                taskDueDate = _addEditTaskUiState.value.taskDueDate,
+                taskIsFinished = _addEditTaskUiState.value.isTaskFinished,
                 userId = userId
             )
             TaskDataSource.saveTask(task)
@@ -61,20 +60,15 @@ class AddEditTaskViewModel : ViewModel() {
         }
     }
 
-
-
-
-
-
     /**
      * 🔹 Récupère une tâche depuis Firestore et met à jour l'UI
      */
     fun getTask(taskId: String) {
         viewModelScope.launch {
             try {
-                val task = TaskDataSource.getTask(taskId) // 🔹 Correction ici, récupération directe de la tâche
+                val task = TaskDataSource.getTask(taskId)
                 task?.let {
-                    addEditTaskUiState = addEditTaskUiState.copy(
+                    _addEditTaskUiState.value = _addEditTaskUiState.value.copy(
                         taskName = it.taskName ?: "",
                         taskDescription = it.taskDescription ?: "",
                         taskDueDate = it.taskDueDate ?: "No due date",
@@ -84,7 +78,6 @@ class AddEditTaskViewModel : ViewModel() {
                     )
                 }
             } catch (e: Exception) {
-                // Gérer les erreurs
                 e.printStackTrace()
             }
         }
@@ -94,6 +87,6 @@ class AddEditTaskViewModel : ViewModel() {
      * 🔹 Réinitialise l'état du formulaire
      */
     fun resetState() {
-        addEditTaskUiState = AddEditTaskUiState()
+        _addEditTaskUiState.value = AddEditTaskUiState()
     }
 }

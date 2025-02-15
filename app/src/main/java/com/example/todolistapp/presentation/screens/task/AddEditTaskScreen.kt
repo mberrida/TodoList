@@ -2,6 +2,7 @@ package com.example.todolistapp.presentation.screens.task
 
 import android.app.DatePickerDialog
 import android.icu.util.Calendar
+import android.util.Log
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -31,30 +32,30 @@ fun AddEditTaskScreen(
     addEditTaskViewModel: AddEditTaskViewModel = viewModel(),
     taskListViewModel: TaskListViewModel = viewModel()
 ) {
-    val taskState = addEditTaskViewModel.addEditTaskUiState
-    var taskName by remember { mutableStateOf(taskState.taskName) }
-    var taskDescription by remember { mutableStateOf(taskState.taskDescription) }
-    var taskDueDate by remember { mutableStateOf(taskState.taskDueDate) }
+    val taskState by addEditTaskViewModel.addEditTaskUiState.collectAsState()
+
+    var taskName by remember { mutableStateOf("") }
+    var taskDescription by remember { mutableStateOf("") }
+    var taskDueDate by remember { mutableStateOf("No due date") }
+
+    val updatedTaskDueDate by rememberUpdatedState(newValue = taskState.taskDueDate)
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    var taskSaved by remember { mutableStateOf(false) }
-
+    // 🔹 Récupération de la tâche
     LaunchedEffect(taskId) {
         taskId?.let {
+            Log.d("Navigation", "🔍 Chargement de la tâche ID: $it")
             addEditTaskViewModel.getTask(it)
-            val updatedTask = addEditTaskViewModel.addEditTaskUiState
-            taskName = updatedTask.taskName
-            taskDescription = updatedTask.taskDescription
-            taskDueDate = updatedTask.taskDueDate
         }
     }
 
-    LaunchedEffect(taskSaved) {
-        if (taskSaved) {
-            delay(500)
-            navController.popBackStack()
-        }
+    // 🔹 Mise à jour des champs après récupération de la tâche
+    LaunchedEffect(taskState) {
+        taskName = taskState.taskName
+        taskDescription = taskState.taskDescription
+        taskDueDate = taskState.taskDueDate
+        Log.d("Navigation", "✅ Tâche chargée: Nom=$taskName, Date=$taskDueDate")
     }
 
     Scaffold(
@@ -62,9 +63,18 @@ fun AddEditTaskScreen(
             TopAppBar(
                 title = { Text(if (taskId == null) "Add Task" else "Edit Task", fontSize = 22.sp) },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
+                    IconButton(onClick = {
+                        Log.d("Navigation", "🔙 Icône Fermer cliqué, retour à HomeScreen")
+                        coroutineScope.launch {
+                            delay(200) // ✅ Évite les conflits de navigation
+                            navController.navigate("HomeScreen") {
+                                popUpTo("HomeScreen") { inclusive = true } // ✅ Ferme TOUTES les pages précédentes
+                            }
+                        }
+                    }) {
                         Icon(Icons.Default.Close, contentDescription = "Cancel", tint = Color.Black)
                     }
+
                 }
             )
         },
@@ -83,13 +93,16 @@ fun AddEditTaskScreen(
 
                         if (success) {
                             taskListViewModel.loadUserTasks(userId)
-                            taskSaved = true
+                            Log.d("Navigation", "✅ Tâche enregistrée avec succès, retour à HomeScreen")
+                            delay(200)
+                            if (!navController.popBackStack()) {
+                                navController.navigate("HomeScreen") { popUpTo("HomeScreen") { inclusive = true } }
+                            }
                         } else {
                             snackbarHostState.showSnackbar("Error saving task")
                         }
                     }
                 }
-
             ) {
                 Icon(Icons.Filled.Check, contentDescription = "Save Task")
             }
@@ -99,7 +112,7 @@ fun AddEditTaskScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.White) // ✅ Fond blanc
+                .background(Color.White)
                 .padding(paddingValues)
                 .padding(16.dp)
         ) {
@@ -111,15 +124,11 @@ fun AddEditTaskScreen(
                 },
                 label = { Text("Task Name", color = Color.Black) },
                 modifier = Modifier.fillMaxWidth(),
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White,
-                    focusedLabelColor = Color.Black,
-                    unfocusedLabelColor = Color.Black,
-                    focusedTextColor = Color.Black,
-                    unfocusedTextColor = Color.Black
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color.Black,
+                    unfocusedBorderColor = Color.Gray,
+                    cursorColor = Color.Black
                 )
-
             )
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -131,18 +140,15 @@ fun AddEditTaskScreen(
                 },
                 label = { Text("Task Description", color = Color.Black) },
                 modifier = Modifier.fillMaxWidth(),
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White,
-                    focusedLabelColor = Color.Black,
-                    unfocusedLabelColor = Color.Black,
-                    focusedTextColor = Color.Black,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color.Black,
+                    unfocusedBorderColor = Color.Gray,
+                    cursorColor = Color.Black
                 )
-
             )
             Spacer(modifier = Modifier.height(8.dp))
 
-            DatePickerInput(taskDueDate) { newDate ->
+            DatePickerInput(updatedTaskDueDate) { newDate ->
                 taskDueDate = newDate
                 addEditTaskViewModel.updateDueDate(newDate)
             }
@@ -157,6 +163,10 @@ fun DatePickerInput(
 ) {
     val context = LocalContext.current
     var selectedDate by remember { mutableStateOf(taskDueDate) }
+
+    LaunchedEffect(taskDueDate) { // ✅ Mise à jour correcte de la date
+        selectedDate = taskDueDate
+    }
 
     val calendar = Calendar.getInstance()
     val year = calendar.get(Calendar.YEAR)
@@ -180,7 +190,7 @@ fun DatePickerInput(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(text = "Due on: $selectedDate", fontSize = 16.sp, color = Color.Black) // ✅ Date en noir
+        Text(text = "Due on: $selectedDate", fontSize = 16.sp, color = Color.Black)
         Icon(
             painter = painterResource(id = R.drawable.calendar_icon),
             contentDescription = "Calendar Icon"

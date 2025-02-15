@@ -1,12 +1,11 @@
 package com.example.todolistapp.presentation.screens.home
 
 import android.annotation.SuppressLint
+import android.util.Log
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,7 +18,6 @@ import androidx.navigation.NavController
 import com.example.todolistapp.domain.model.Task
 import com.example.todolistapp.presentation.screens.task.TaskListViewModel
 import kotlinx.coroutines.launch
-import java.util.UUID
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
@@ -30,7 +28,7 @@ import androidx.compose.material.DismissValue
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.SwipeToDismiss
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
 @Composable
 fun HomeScreen(
@@ -78,14 +76,16 @@ fun HomeScreen(
                 )
             } else {
                 LazyColumn {
-                    items(tasks, key = { it.taskID ?: UUID.randomUUID().toString() }) { task ->
+                    items(tasks, key = { it.taskID ?: "" }) { task ->
                         SwipeTaskItem(
                             task = task,
-                            onDelete = { taskListViewModel.deleteTask(it.taskID ?: "", userId) },
-                            onEdit = { navController.navigate("AddEditTaskScreen/${it.taskID}") }
+                            onDelete = { taskListViewModel.deleteTask(task.taskID ?: "", userId) },
+                            onEdit = { task.taskID.let { navController.navigate("AddEditTaskScreen/$it") } },
+                            navController = navController // ✅ Ajout du paramètre manquant
                         )
                     }
                 }
+
             }
         }
     }
@@ -93,11 +93,12 @@ fun HomeScreen(
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
-fun SwipeTaskItem(task: Task, onDelete: (Task) -> Unit, onEdit: (Task) -> Unit) {
+fun SwipeTaskItem(task: Task, onDelete: (Task) -> Unit, onEdit: (Task) -> Unit, navController: NavController) {
     val dismissState = rememberDismissState()
 
     if (dismissState.isDismissed(DismissDirection.StartToEnd)) {
-        onEdit(task)
+        Log.d("Navigation", "Task ID envoyé: ${task.taskID}") // ✅ Vérification de l'ID
+        navController.navigate("AddEditTaskScreen/${task.taskID}")
     }
     if (dismissState.isDismissed(DismissDirection.EndToStart)) {
         onDelete(task)
@@ -107,9 +108,9 @@ fun SwipeTaskItem(task: Task, onDelete: (Task) -> Unit, onEdit: (Task) -> Unit) 
         state = dismissState,
         directions = setOf(DismissDirection.StartToEnd, DismissDirection.EndToStart),
         background = {
-            val color = when {
-                dismissState.dismissDirection == DismissDirection.StartToEnd -> Color.Blue
-                dismissState.dismissDirection == DismissDirection.EndToStart -> Color.Red
+            val color = when (dismissState.dismissDirection) {
+                DismissDirection.StartToEnd -> Color.Blue // Modifier
+                DismissDirection.EndToStart -> Color.Red // Supprimer
                 else -> Color.Gray
             }
             Box(
@@ -131,6 +132,7 @@ fun SwipeTaskItem(task: Task, onDelete: (Task) -> Unit, onEdit: (Task) -> Unit) 
         }
     )
 }
+
 
 @Composable
 fun TaskItem(task: Task) {
