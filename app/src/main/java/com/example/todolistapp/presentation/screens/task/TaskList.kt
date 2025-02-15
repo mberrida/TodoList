@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -16,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.ui.unit.sp
 
 @Composable
 fun TaskListScreen(navController: NavController, taskListViewModel: TaskListViewModel = viewModel()) {
@@ -40,27 +42,68 @@ fun TaskListScreen(navController: NavController, taskListViewModel: TaskListView
             } else {
                 LazyColumn {
                     items(tasks) { task ->
-                        TaskItem(task = task, onClick = { navController.navigate("EditTask/${task.taskID}") })
+                        TaskItem(
+                            task = task,
+                            onTaskChecked = { isChecked ->
+                                taskListViewModel.updateTaskCompletion(task.taskID ?: "", isChecked)
+                            },
+                            onClick = { navController.navigate("EditTask/${task.taskID}") } // ✅ Navigation vers l'édition
+                        )
                     }
                 }
+
+
             }
         }
     }
 }
 
 @Composable
-fun TaskItem(task: Task, onClick: () -> Unit) {
+fun TaskItem(task: Task, onTaskChecked: (Boolean) -> Unit, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(8.dp)
-            .clickable { onClick() }
+            .padding(horizontal = 16.dp, vertical = 8.dp) // ✅ Espacement correct
+            .clickable { onClick() }, // ✅ Clique pour modifier la tâche
+        shape = RoundedCornerShape(16.dp), // ✅ Coins arrondis
+        colors = CardDefaults.cardColors(containerColor = Color.White), // ✅ Fond blanc
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp) // ✅ Ombre plus marquée
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = task.taskName, style = MaterialTheme.typography.bodyLarge) // ✅ Corrigé
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(text = "Échéance : ${task.taskDueDate}") // ✅ Corrigé
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // ✅ Checkbox à gauche
+            Checkbox(
+                checked = task.taskIsFinished ?: false,
+                onCheckedChange = { isChecked -> onTaskChecked(isChecked) },
+                modifier = Modifier.padding(end = 12.dp)
+            )
+
+            // ✅ Texte de la tâche bien aligné
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = task.taskName ?: "No title",
+                    fontSize = 18.sp,
+                    color = Color.Black
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Due on ${task.taskDueDate ?: "No due date"}",
+                    fontSize = 14.sp,
+                    color = Color.Gray
+                )
+            }
         }
     }
 }
+
+
+
+
+
+
+
 

@@ -45,4 +45,22 @@ class TaskListViewModel : ViewModel() {
             loadUserTasks(userId) // Recharger après suppression
         }
     }
+
+
+    fun updateTaskCompletion(taskId: String, isFinished: Boolean) {
+        viewModelScope.launch {
+            try {
+                val task = tasks.value.find { it.taskID == taskId }
+                if (task != null) {
+                    val updatedTask = task.copy(taskIsFinished = isFinished)
+                    TaskDataSource.saveTask(updatedTask) // 🔹 Met à jour Firestore ou ta source de données
+                    loadUserTasks(task.userId ?: "") // 🔹 Recharge les tâches après la modification
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
 }
+

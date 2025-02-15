@@ -94,9 +94,11 @@ fun AddEditTaskScreen(
                         if (success) {
                             taskListViewModel.loadUserTasks(userId)
                             Log.d("Navigation", "✅ Tâche enregistrée avec succès, retour à HomeScreen")
-                            delay(200)
-                            if (!navController.popBackStack()) {
-                                navController.navigate("HomeScreen") { popUpTo("HomeScreen") { inclusive = true } }
+
+                            delay(200) // ✅ Empêche un conflit de navigation
+
+                            navController.navigate("HomeScreen") {
+                                popUpTo("HomeScreen") { inclusive = true } // ✅ Ferme TOUTES les pages précédentes
                             }
                         } else {
                             snackbarHostState.showSnackbar("Error saving task")
@@ -106,6 +108,7 @@ fun AddEditTaskScreen(
             ) {
                 Icon(Icons.Filled.Check, contentDescription = "Save Task")
             }
+
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->

@@ -3,9 +3,11 @@ package com.example.todolistapp.presentation.screens.home
 import android.annotation.SuppressLint
 import android.util.Log
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,15 +19,16 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.todolistapp.domain.model.Task
 import com.example.todolistapp.presentation.screens.task.TaskListViewModel
-import kotlinx.coroutines.launch
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+//noinspection UsingMaterialAndMaterial3Libraries
 import androidx.compose.material.rememberDismissState
+//noinspection UsingMaterialAndMaterial3Libraries
 import androidx.compose.material.DismissDirection
-import androidx.compose.material.DismissValue
 import androidx.compose.material.ExperimentalMaterialApi
+//noinspection UsingMaterialAndMaterial3Libraries
 import androidx.compose.material.SwipeToDismiss
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
@@ -128,39 +131,57 @@ fun SwipeTaskItem(task: Task, onDelete: (Task) -> Unit, onEdit: (Task) -> Unit, 
             }
         },
         dismissContent = {
-            TaskItem(task)
+            TaskItem(
+                task = task,
+                onTaskChecked = { isChecked -> /* Ajoute ici la fonction pour cocher/décocher */ },
+                onClick = { onEdit(task) } // ✅ Ajoute l'action pour ouvrir l'édition
+            )
         }
+
     )
 }
 
 
 @Composable
-fun TaskItem(task: Task) {
+fun TaskItem(task: Task, onTaskChecked: (Boolean) -> Unit, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5))
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            Checkbox(
+                checked = task.taskIsFinished ?: false,
+                onCheckedChange = { isChecked -> onTaskChecked(isChecked) },
+                modifier = Modifier.padding(end = 12.dp)
+            )
+
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = task.taskName ?: "",
+                    text = task.taskName ?: "No title",
                     fontSize = 18.sp,
                     color = Color.Black
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "Due on ${task.taskDueDate ?: "No due date"}",
+                    fontSize = 14.sp,
                     color = Color.Gray
                 )
             }
         }
     }
 }
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
